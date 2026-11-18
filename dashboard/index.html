@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explorateur des prix des métaux</title>
+<meta name="description" content="Prix mensuels des métaux (FMI, 1980-2017) et de l'or (1980-2026) : variation, extrêmes, volatilité sur la période choisie.">
+<style>
+  :root {
+    color-scheme: light;
+    --surface: #fcfcfb; --card: #ffffff; --line: #e6e5e1;
+    --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #7c7b76;
+    --s1: #2a78d6; --s2: #eb6834; --band: #f1f0ec; --up: #1baf7a; --down: #e34948;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface: #1a1a19; --card: #222220; --line: #34332f;
+      --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #94938b;
+      --s1: #3987e5; --s2: #d95926; --band: #2a2a27; --up: #199e70; --down: #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface: #1a1a19; --card: #222220; --line: #34332f;
+    --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #94938b;
+    --s1: #3987e5; --s2: #d95926; --band: #2a2a27; --up: #199e70; --down: #e66767;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--surface); color: var(--ink);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 16px 48px; }
+  h1 { font-size: 1.55rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--ink-2); }
+  .filtres { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; margin: 22px 0 18px; }
+  .filtres label { display: flex; flex-direction: column; font-size: 12px; color: var(--ink-2); gap: 4px; }
+  select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line);
+           border-radius: 8px; padding: 7px 10px; min-width: 130px; }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; }
+  .presets button { font: inherit; font-size: 13px; background: var(--card); border: 1px solid var(--line); color: var(--ink-2);
+                    border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .presets button[aria-pressed="true"] { border-color: var(--s1); color: var(--ink); }
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .kpi, .carte { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  .kpi { padding: 14px 16px; }
+  .kpi span { display: block; font-size: 12px; color: var(--ink-2); }
+  .kpi strong { display: block; font-size: 1.5rem; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin-top: 2px; }
+  .kpi small { color: var(--ink-3); font-size: 12px; }
+  .up { color: var(--up); } .down { color: var(--down); }
+  .carte { margin-top: 12px; padding: 14px 16px 10px; }
+  .carte h2 { font-size: 14px; margin: 0 0 2px; }
+  .carte p { font-size: 12px; color: var(--ink-3); margin: 0 0 8px; }
+  .zone { position: relative; height: 360px; }
+  .note { margin-top: 16px; font-size: 13px; color: var(--ink-2); background: var(--card); border: 1px solid var(--line);
+          border-left: 3px solid var(--s1); border-radius: 8px; padding: 12px 14px; }
+  footer { margin-top: 20px; font-size: 12px; color: var(--ink-3); }
+  footer a { color: var(--s1); }
+  @media (max-width: 820px) {
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .zone { height: 280px; }
+    .filtres label { flex: 1 1 130px; } select { width: 100%; min-width: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Explorateur des prix des métaux</h1>
+    <p>Prix mensuels du FMI (1980-2017) et de l'or (1980-2026). Choisissez un métal et une période : variation, extrêmes et volatilité se recalculent.</p>
+  </header>
+
+  <div class="filtres">
+    <label>Métal <select id="f-metal"></select></label>
+    <label>De <select id="f-debut"></select></label>
+    <label>À <select id="f-fin"></select></label>
+    <div class="presets" role="group" aria-label="Périodes types">
+      <button type="button" data-p="1980-2017">Tout</button>
+      <button type="button" data-p="2003-2011">Super-cycle 2003-2011</button>
+      <button type="button" data-p="2011-2016">Chute 2011-2016</button>
+    </div>
+  </div>
+
+  <section class="kpis" aria-live="polite">
+    <div class="kpi"><span>Prix en fin de période</span><strong id="k-fin">–</strong><small id="k-unite"></small></div>
+    <div class="kpi"><span>Variation sur la période</span><strong id="k-var">–</strong><small id="k-deb"></small></div>
+    <div class="kpi"><span>Plus haut / plus bas</span><strong id="k-ext">–</strong><small id="k-ext-d"></small></div>
+    <div class="kpi"><span>Volatilité annualisée</span><strong id="k-vol">–</strong><small>écart-type des rendements mensuels × √12</small></div>
+  </section>
+
+  <div class="carte">
+    <h2 id="titre-graph">Prix mensuel</h2>
+    <p>Valeurs nominales en dollars courants. Survolez la courbe pour lire chaque mois.</p>
+    <div class="zone"><canvas id="graph" aria-label="Prix mensuel du métal sélectionné"></canvas></div>
+  </div>
+
+  <div class="note"><strong>Point de méthode :</strong> pour le minerai de fer, la série combine les prix de contrat annuels (jusqu'en 2008) et le prix spot Chine 62 % Fe (depuis 2009). Avant 2009, le prix ne bouge qu'une fois par an, donc sa volatilité est mécaniquement faible.</div>
+
+  <footer>Sources : FMI, Primary Commodity Prices (via datasets/commodity-prices) ; or : datasets/gold-prices. Analyse : Emmanuel Noualeu · <a href="https://github.com/emmanuelnoualeu/marche-metaux-analyse">code source</a></footer>
+</div>
+
+<script src="donnees.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+  const M = window.METAUX;
+  const $ = (id) => document.getElementById(id);
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const nf = (n, d) => new Intl.NumberFormat("fr-FR", { maximumFractionDigits: d, minimumFractionDigits: d }).format(n);
+  const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+  const lib = (ym) => MOIS[+ym.slice(5, 7) - 1] + " " + ym.slice(0, 4);
+  const ORDRE = ["Minerai de fer", "Cuivre", "Aluminium", "Nickel", "Zinc", "Plomb", "Étain", "Uranium", "Charbon", "Pétrole brut", "Or"];
+  ORDRE.forEach(n => $("f-metal").add(new Option(n, n)));
+  const annees = [...new Set(M.dates.map(d => +d.slice(0, 4)))];
+  annees.forEach(a => { $("f-debut").add(new Option(a, a)); $("f-fin").add(new Option(a, a)); });
+  $("f-debut").value = 1980; $("f-fin").value = 2017;
+  let chart;
+
+  function maj() {
+    const nom = $("f-metal").value;
+    let a0 = +$("f-debut").value, a1 = +$("f-fin").value;
+    if (a1 < a0) { [a0, a1] = [a1, a0]; $("f-debut").value = a0; $("f-fin").value = a1; }
+    const pts = M.dates.map((d, i) => [d, M.series[nom][i]])
+      .filter(([d, v]) => v !== null && +d.slice(0, 4) >= a0 && +d.slice(0, 4) <= a1);
+    const u = M.unites[nom];
+    document.querySelectorAll(".presets button").forEach(b => b.setAttribute("aria-pressed", b.dataset.p === a0 + "-" + a1));
+    $("titre-graph").textContent = nom + " : prix mensuel (" + u + ")";
+    if (pts.length < 2) {
+      ["k-fin", "k-var", "k-ext", "k-vol"].forEach(id => $(id).textContent = "–");
+      $("k-deb").textContent = "Pas de données " + nom.toLowerCase() + " sur cette période"; $("k-unite").textContent = ""; $("k-ext-d").textContent = "";
+    } else {
+      const v = pts.map(p => p[1]);
+      const fin = v[v.length - 1], deb = v[0];
+      const iMax = v.indexOf(Math.max(...v)), iMin = v.indexOf(Math.min(...v));
+      const r = v.slice(1).map((x, i) => Math.log(x / v[i]));
+      const m = r.reduce((s, x) => s + x, 0) / r.length;
+      const sd = Math.sqrt(r.reduce((s, x) => s + (x - m) ** 2, 0) / (r.length - 1));
+      const dec = fin < 100 ? 1 : 0;
+      $("k-fin").textContent = nf(fin, dec);
+      $("k-unite").textContent = u + " · " + lib(pts[pts.length - 1][0]);
+      const varp = 100 * (fin / deb - 1);
+      $("k-var").textContent = (varp > 0 ? "+" : "") + nf(varp, 0) + " %";
+      $("k-var").className = varp >= 0 ? "up" : "down";
+      $("k-deb").textContent = "depuis " + nf(deb, dec) + " en " + lib(pts[0][0]);
+      $("k-ext").textContent = nf(v[iMax], dec) + " / " + nf(v[iMin], dec);
+      $("k-ext-d").textContent = lib(pts[iMax][0]) + " / " + lib(pts[iMin][0]);
+      $("k-vol").textContent = nf(100 * sd * Math.sqrt(12), 0) + " %";
+    }
+    const data = { labels: pts.map(p => p[0]), datasets: [{ data: pts.map(p => p[1]), borderColor: css("--s1"), borderWidth: 2,
+      pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: css("--s1"), tension: 0 }] };
+    const opts = {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 200 },
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { title: c => lib(c[0].label), label: c => " " + nf(c.raw, c.raw < 100 ? 1 : 0) + " " + u } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: css("--ink-2"), maxTicksLimit: 10, callback: function (val) { return this.getLabelForValue(val).slice(0, 4); } } },
+        y: { grid: { color: css("--line") }, ticks: { color: css("--ink-2") } }
+      }
+    };
+    if (!window.Chart) return;
+    if (chart) { chart.data = data; chart.options = opts; chart.update(); }
+    else chart = new Chart($("graph"), { type: "line", data, options: opts });
+  }
+
+  if (window.Chart) Chart.defaults.locale = "fr-FR";
+  ["f-metal", "f-debut", "f-fin"].forEach(id => $(id).addEventListener("change", maj));
+  document.querySelectorAll(".presets button").forEach(b => b.addEventListener("click", () => {
+    const [a, z] = b.dataset.p.split("-"); $("f-debut").value = a; $("f-fin").value = z; maj();
+  }));
+  maj();
+})();
+</script>
+</body>
+</html>
