@@ -1,5 +1,14 @@
 # Marché des métaux 1980-2017 : ce que 37 ans de prix apprennent à un projet minier
 
+> **English summary**
+>
+> - **Problem:** a mining project is decided on a future selling price. Which price should it assume, and what risk should it accept?
+> - **Data:** IMF monthly prices for 10 commodities (iron ore, copper, aluminium, nickel, zinc, lead, tin, uranium, coal, oil), 1980-2017, plus gold prices up to October 2026.
+> - **Method:** base-100 indices, cycle analysis, annualised volatility by period, correlations of monthly returns (Python, pandas, matplotlib), interactive explorer.
+> - **Result:** iron ore rose 13.5x between 2000 and 2011, then lost 78% in less than 5 years. Over 2010-2017, the gap between a "good" and a "bad" month ranges from $57 to $170/t.
+>
+> *The detailed write-up below is in French. Code, figures and results are language-independent.*
+
 **Python (pandas, matplotlib) · séries temporelles · volatilité · corrélations · explorateur interactif**
 
 > - **Le problème :** un projet minier se décide sur un prix de vente futur. Quel prix retenir, et quel risque accepter ?
